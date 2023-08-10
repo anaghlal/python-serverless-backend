@@ -1,0 +1,22 @@
+mkdir code
+cd code
+git clone https://github.com/anaghlal/python-serverless-backend.git
+cd ..
+sudo yum install python3.9
+sudo yum install python3-pip
+sudo yum install zip
+sudo yum install git -y
+wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+unzip aws-sam-cli-linux-x86_64.zip -d sam-installation
+sudo ./sam-installation/install
+sudo yum install postgresql -y
+
+cd code
+mkdir -p layer/python/lib/python3.9/site-packages
+
+cp python-serverless-backend/lambda-workshop/layer_requirements.txt .
+ pip3 install -r layer_requirements.txt . -t layer/python/lib/python3.9/site-packages
+ cd layer/
+rm -rf find ./python/ -name "pycache"
+zip -r project_deps_layer.zip *
+aws s3 cp project_deps_layer.zip s3://codebucket-anaghlal/project_deps_layer.zip
