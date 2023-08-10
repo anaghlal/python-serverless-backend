@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  lambda-workshop
+
+  Sample SAM Template for lambda-workshop
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+          Variables:
+            RDS_HOST: lambdadb
+            RDS_USERNAME: masteruser
+            RDS_USER_PWD: default
+            RDS_DB_NAME: pglab
+    VpcConfig:
+        SecurityGroupIds:
+          - sg-022d9b9280164464d 
+        SubnetIds:
+          - subnet-09833a5c1440c4436
+          - subnet-0962591e064550035
+          - subnet-0e7cd046a1d0eeec3
+          - subnet-009af6d7e4e31b81d
+          - subnet-088bd5a5e2b361d69
+          - subnet-034d3d148204e0698 
+
+Resources:
+  AppLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaRole'
+        - 'arn:aws:iam::aws:policy/AWSLambdaExecute'
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess'
+        - 'arn:aws:iam::aws:policy/AmazonSQSFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonRDSFullAccess'
+        - 'arn:aws:iam::aws:policy/SecretsManagerReadWrite'
+        - 'arn:aws:iam::aws:policy/AmazonVPCFullAccess'
+      AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - 'lambda.amazonaws.com'
+              Action:
+                - 'sts:AssumeRole'
+      Policies:
+          - PolicyName: 'SecretsManagerParameterAccess'
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - ssm:GetParam*
+                    - ssm:DescribeParam*
+                    - kms:GetSecretValue
+                    - kms:Decrypt
+                  Resource:
+                    - arn:aws:ssm:*:*:parameter/*
+
+  FetchApplicationRequestsFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: fetchApplications/
+      Handler: fetchApps.lambda_handler
+      Runtime: python3.9
+      Layers:
+          - arn:aws:lambda:ap-south-1:663212880624:layer:project_deps_layer:1
+      Role: !GetAtt AppLambdaRole.Arn        
+      Architectures:
+        - x86_64         
+      Events:
+        ApplicationRequests:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /fetchRequests
+            Method: get
